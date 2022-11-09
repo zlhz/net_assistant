@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:net_assistant/src/model/json/json_convert_content.dart';
 import 'package:net_assistant/src/token_interceptor.dart';
 import 'package:net_assistant/src/model/api_response.dart';
 import 'package:net_assistant/src/model/token.dart';
@@ -52,7 +53,9 @@ class NetAssistant {
     error = true,
     maxWidth = 90,
     compact = true,
-    logPrint = print,}) {
+    logPrint = print,
+    Map<String, JsonConvertFunction>? jsonConvertFuncMap,
+    ListJsonConvertFunction? jsonListChildCovertFunc,}) {
     _tokenInterceptor = TokenInterceptor();
     _dio = Dio(
         BaseOptions(method: method,
@@ -84,6 +87,12 @@ class NetAssistant {
         compact: compact,
         maxWidth: maxWidth));
     _instance = NetAssistant._();
+    if(jsonConvertFuncMap!=null){
+      JsonConvert.convertFuncMap.addAll(jsonConvertFuncMap);
+    }
+    if(jsonListChildCovertFunc!=null){
+      JsonConvert.jsonListChildCovertFunc=jsonListChildCovertFunc;
+    }
   }
 
   Future<T?> request<T>(
