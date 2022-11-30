@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart' show debugPrint;
+import 'package:net_assistant/net_assistant.dart';
 import 'package:net_assistant/src/model/api_response.dart';
 
 JsonConvert jsonConvert = JsonConvert();
 typedef JsonConvertFunction<T> = T Function(Map<String, dynamic> json);
-typedef ListJsonConvertFunction<M> = M? Function(List<Map<String, dynamic>> data);
-class JsonConvert {
-  static late ListJsonConvertFunction? _jsonListChildCovertFunc;
+class JsonConvert with BaseConverter{
+  static late BaseConverter? _converter;
 	static final Map<String, JsonConvertFunction> _convertFuncMap = {
 		(ApiResponse).toString(): ApiResponse.fromJson,
 	};
-  static set jsonListChildCovertFunc(e){
-    JsonConvert._jsonListChildCovertFunc=e;
+  static set converter(converter){
+    JsonConvert._converter=converter;
   }
   static get convertFuncMap =>_convertFuncMap;
 
@@ -93,10 +93,10 @@ class JsonConvert {
 		if(<ApiResponse>[] is M){
 			return data.map<ApiResponse>((Map<String, dynamic> e) => ApiResponse.fromJson(e)).toList() as M;
 		}
-		debugPrint("${M.toString()} not found");
-	  if(_jsonListChildCovertFunc!=null){
-      return _jsonListChildCovertFunc!(data);
+	  if(_converter!=null){
+      return _converter!.getListChildType<M>(data);
     }else{
+      debugPrint("${M.toString()} not found");
       return null;
     }
 }

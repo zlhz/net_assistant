@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:net_assistant/net_assistant.dart';
 import 'package:net_assistant/src/model/json/json_convert_content.dart';
 import 'package:net_assistant/src/token_interceptor.dart';
 import 'package:net_assistant/src/model/api_response.dart';
 import 'package:net_assistant/src/model/token.dart';
 import 'package:net_assistant/src/exception.dart';
-import 'package:net_assistant/src/config.dart';
 import 'package:net_assistant/src/raw_data.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
@@ -55,7 +55,7 @@ class NetAssistant {
     compact = true,
     logPrint = print,
     Map<String, JsonConvertFunction>? jsonConvertFuncMap,
-    ListJsonConvertFunction? jsonListChildCovertFunc,}) {
+    BaseConverter? converter,}) {
     _tokenInterceptor = TokenInterceptor();
     _dio = Dio(
         BaseOptions(method: method,
@@ -90,8 +90,8 @@ class NetAssistant {
     if(jsonConvertFuncMap!=null){
       JsonConvert.convertFuncMap.addAll(jsonConvertFuncMap);
     }
-    if(jsonListChildCovertFunc!=null){
-      JsonConvert.jsonListChildCovertFunc=jsonListChildCovertFunc;
+    if(converter!=null){
+      JsonConvert.converter=converter;
     }
   }
 
@@ -208,7 +208,7 @@ class NetAssistant {
 
   ///业务内容处理
   T? _handleBusinessResponse<T>(ApiResponse<T> response) {
-    if (response.code == RequestConfig.successCode) {
+    if (response.code == 200) {
       return response.data;
     } else {
       var exception = ApiException(response.code, response.msg);
