@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:net_assistant/net_assistant.dart';
+import 'package:net_assistant_example/generated/json/Converter.dart';
 import 'package:net_assistant_example/generated/json/base/json_convert_content.dart';
 import 'package:net_assistant_example/model/moment_entity.dart';
 
@@ -23,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     NetAssistant.init(baseUrl: 'https://api.xxx.com',
-        jsonListChildCovertFunc: JsonConvert.getListChildType,
+        converter: Converter(),
         jsonConvertFuncMap: JsonConvert.convertFuncMap);
   }
 
