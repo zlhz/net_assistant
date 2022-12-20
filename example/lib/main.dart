@@ -23,11 +23,18 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    NetAssistant.init(baseUrl: 'https://api.xxx.com',
+    NetAssistant.init(baseUrl: 'http://192.168.2.6:8080',
         converter: Converter(),
-        jsonConvertFuncMap: JsonConvert.convertFuncMap);
+        jsonConvertFuncMap: JsonConvert.convertFuncMap,
+        logPrint:true,
+        headers: {
+          "userType": "test",
+        },
+        globalErrorHandler:(ApiException exception){
+            print(exception);
+            return true;
+        });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -43,25 +50,39 @@ class _MyAppState extends State<MyApp> {
           child: const Icon(
             Icons.near_me
           ),
-          onPressed: ()=>login(),
+          onPressed: ()=>request(),
         ),
       ),
     );
   }
-  Future<void> login() async {
-    String? data = await NetAssistant.instance.post<String>("/login",data: {
-      'username':"username",
-      'password':"password",
-    },dataKey: 'token');
-    if(data!=null){
-      NetAssistant.instance.setAuth(Token("Authorization", "Bearer ${data}"));
-      response=data;
-      setState(() {
 
-      });
+  Future<void> request() async {
+    Token? token =await login();
+    if(token!=null){
+      NetAssistant.instance.setAuth(token);
+      ApiResponse<List<TestEntity>?> listResponse = await NetAssistant.instance.request<List<TestEntity>>("/test/list?pageNum=1&pageSize=30",
+          dataKey: 'rows');
+      if(listResponse.data!=null  && listResponse.total!=null){
+        print('${listResponse.data!.length}');
+        print('total: ${listResponse.total!}');
+      }
     }
-    List<TestEntity>? testList = await NetAssistant.instance.get<List<TestEntity>>("/test//list?pageNum=1&pageSize=100",
-    dataKey: 'rows');
-    print('${testList!.length}');
+  }
+
+
+  Future<Token?> login() async{
+    ApiResponse<String?> loginResponse = await NetAssistant.instance.request<String>("/login",method: Method.post,data: {
+      'username': 'username',
+      'password': 'password',
+    },dataKey: 'token',onError: (ApiException exception){
+          //if define onError here globalErrorHandler will not run
+          print(exception);
+          return true;
+        });
+    if(loginResponse.data!=null){
+      return Token("Authorization", "Bearer ${loginResponse.data}");
+    }else{
+      return null;
+    }
   }
 }

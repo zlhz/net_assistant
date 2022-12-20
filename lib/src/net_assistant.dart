@@ -1,23 +1,22 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:net_assistant/net_assistant.dart';
 import 'package:net_assistant/src/model/json/json_convert_content.dart';
 import 'package:net_assistant/src/token_interceptor.dart';
 import 'package:net_assistant/src/model/api_response.dart';
-import 'package:net_assistant/src/model/token.dart';
-import 'package:net_assistant/src/exception.dart';
 import 'package:net_assistant/src/raw_data.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
+import 'api_exception.dart';
+
+typedef RequestErrorHandler = bool Function(ApiException exception)?;
 class NetAssistant {
   static late Dio _dio;
 
   static NetAssistant? _instance;
-  // factory RequestClient() => instance;
   NetAssistant._();
+  static RequestErrorHandler _globalOnErrorHandler;
 
-  static late TokenInterceptor _tokenInterceptor;
+  static TokenInterceptor? _tokenInterceptor;
   static NetAssistant get instance {
     if(_instance==null){
       throw Exception('you must call init first');
@@ -45,18 +44,13 @@ class NetAssistant {
     ResponseDecoder? responseDecoder,
     ListFormat? listFormat,
     setRequestContentTypeWhenNoPayload = false,
-    request = true,
-    requestHeader = true,
-    requestBody = true,
-    responseHeader = true,
-    responseBody = true,
-    error = true,
-    maxWidth = 90,
-    compact = true,
-    logPrint = print,
+    bool logPrint=false,
     Map<String, JsonConvertFunction>? jsonConvertFuncMap,
-    BaseConverter? converter,}) {
-    _tokenInterceptor = TokenInterceptor();
+    BaseConverter? converter,
+    RequestErrorHandler globalErrorHandler,
+    TokenInterceptor? tokenInterceptor}) {
+    _globalOnErrorHandler = globalErrorHandler;
+    _tokenInterceptor = tokenInterceptor?? TokenInterceptor();
     _dio = Dio(
         BaseOptions(method: method,
           baseUrl: baseUrl,
@@ -76,16 +70,20 @@ class NetAssistant {
           responseDecoder: responseDecoder,
           listFormat: listFormat,
           setRequestContentTypeWhenNoPayload: setRequestContentTypeWhenNoPayload,));
-    _dio.interceptors.add(_tokenInterceptor);
-    _dio.interceptors.add(PrettyDioLogger(
-        request: request,
-        requestHeader: requestHeader,
-        requestBody: requestBody,
-        responseBody: responseBody,
-        responseHeader: responseHeader,
-        error: error,
-        compact: compact,
-        maxWidth: maxWidth));
+    if(_tokenInterceptor!=null){
+      _dio.interceptors.add(_tokenInterceptor!);
+    }
+    if(logPrint) {
+      _dio.interceptors.add(PrettyDioLogger(
+          request: true,
+          requestHeader: true,
+          requestBody: true,
+          responseBody: true,
+          responseHeader: true,
+          error: true,
+          compact: true,
+          maxWidth: 80));
+    }
     _instance = NetAssistant._();
     if(jsonConvertFuncMap!=null){
       JsonConvert.convertFuncMap.addAll(jsonConvertFuncMap);
@@ -95,9 +93,9 @@ class NetAssistant {
     }
   }
 
-  Future<T?> request<T>(
+  Future<ApiResponse<T?>> request<T>(
       String url, {
-        String method = "Get",
+        Method method = Method.get,
         Map<String, dynamic>? queryParameters,
         data,
         Map<String, dynamic>? headers,
@@ -106,7 +104,7 @@ class NetAssistant {
       }) async {
     try {
       Options options = Options()
-        ..method = method
+        ..method = method.name
         ..headers = headers;
 
       // data = _convertRequestData(data);
@@ -117,85 +115,24 @@ class NetAssistant {
       return _handleResponse<T>(response,dataKey);
     } catch (e) {
       var exception = ApiException.from(e);
-      if(onError?.call(exception) != true){
-        throw exception;
+      //method onError is defined,will not run _globalOnErrorHandler
+      if(onError!=null){
+        onError.call(exception);
+      }else if(_globalOnErrorHandler!=null){
+        _globalOnErrorHandler!(exception);
       }
+      throw exception;
     }
-
-    return null;
-  }
-
-  Future<T?> get<T>(
-      String url, {
-        Map<String, dynamic>? queryParameters,
-        Map<String, dynamic>? headers,
-        bool showLoading = true,
-        bool Function(ApiException)? onError,dataKey
-      }) {
-    return request(url,
-        queryParameters: queryParameters,
-        headers: headers,
-        onError: onError,dataKey: dataKey);
-  }
-
-  Future<T?> post<T>(
-      String url, {
-        Map<String, dynamic>? queryParameters,
-        data,
-        dataKey,
-        Map<String, dynamic>? headers,
-        bool showLoading = true,
-        bool Function(ApiException)? onError,
-      }) {
-    return request(url,
-        method: "POST",
-        queryParameters: queryParameters,
-        data: data,
-        headers: headers,
-        onError: onError,dataKey: dataKey);
-  }
-
-  Future<T?> delete<T>(
-      String url, {
-        Map<String, dynamic>? queryParameters,
-        data,
-        dataKey,
-        Map<String, dynamic>? headers,
-        bool showLoading = true,
-        bool Function(ApiException)? onError,
-      }) {
-    return request(url,
-        method: "DELETE",
-        queryParameters: queryParameters,
-        data: data,
-        headers: headers,
-        onError: onError,dataKey: dataKey);
-  }
-
-  Future<T?> put<T>(
-      String url, {
-        Map<String, dynamic>? queryParameters,
-        data,
-        dataKey,
-        Map<String, dynamic>? headers,
-        bool showLoading = true,
-        bool Function(ApiException)? onError,
-      }) {
-    return request(url,
-        method: "PUT",
-        queryParameters: queryParameters,
-        data: data,
-        headers: headers,
-        onError: onError,dataKey: dataKey);
   }
 
   ///请求响应内容处理
-  T? _handleResponse<T>(Response response,dataKey) {
+  ApiResponse<T?> _handleResponse<T>(Response response,dataKey) {
     if (response.statusCode == 200) {
       if(T.toString() == (RawData).toString()){
         RawData raw = RawData();
         raw.value = response.data;
-        return raw as T;
+        ApiResponse<RawData> apiResponse = ApiResponse()..data=raw;
+        return apiResponse as ApiResponse<T?>;
       }else {
         ApiResponse<T> apiResponse = ApiResponse<T>.fromJson(response.data,dataKey:dataKey);
         return _handleBusinessResponse<T>(apiResponse);
@@ -207,9 +144,9 @@ class NetAssistant {
   }
 
   ///业务内容处理
-  T? _handleBusinessResponse<T>(ApiResponse<T> response) {
+  ApiResponse<T?> _handleBusinessResponse<T>(ApiResponse<T> response) {
     if (response.code == 200) {
-      return response.data;
+      return response;
     } else {
       var exception = ApiException(response.code, response.msg);
       throw exception;
@@ -217,6 +154,18 @@ class NetAssistant {
   }
 
   void setAuth(Token model){
-    _tokenInterceptor.authModel=model;
+    if(_tokenInterceptor!=null){
+      _tokenInterceptor!.authModel=model;
+    }
   }
+}
+
+enum Method{
+  get('GET'),
+  put('PUT'),
+  post('POST'),
+  update('UPDATE'),
+  delete('DELETE');
+  final String name;
+  const Method(this.name,);
 }
