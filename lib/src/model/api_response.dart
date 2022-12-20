@@ -7,13 +7,15 @@ import '../../net_assistant.dart';
 class ApiResponse<T> {
 
 	late int code;
+  late Status status;
 	late String msg;
   int? total;
 	T? data;
   ApiException? exception;
   ApiResponse();
-  factory ApiResponse.fromJson(Map<String, dynamic> json,{dataKey}) => $ApiResponseFromJson<T>(json,dataKey: dataKey);
-  factory ApiResponse.error(ApiException? exception) =>ApiResponse()..code=-1..msg='error'..exception=exception;
+  factory ApiResponse.fromJson(Map<String, dynamic> json,{dataKey}) => $ApiResponseFromJson<T>(json,dataKey: dataKey)..status=Status.success;
+  factory ApiResponse.failure(ApiResponse response) =>ApiResponse()..code=-1..msg=response.msg..status=Status.failure;
+  factory ApiResponse.error(ApiException? exception) =>ApiResponse()..code=-1..msg='error'..exception=exception..status=Status.error;
   Map<String, dynamic> toJson() => $ApiResponseToJson(this);
 
   @override
@@ -46,6 +48,13 @@ ApiResponse<T> $ApiResponseFromJson<T>(Map<String, dynamic> json,{dataKey = 'dat
   }
   return apiResponse;
 }
+
+enum Status {
+  success,
+  error,
+  failure,
+}
+
 
 Map<String, dynamic> $ApiResponseToJson(ApiResponse entity) {
   final Map<String, dynamic> data = <String, dynamic>{};
