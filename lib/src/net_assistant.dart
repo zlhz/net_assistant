@@ -190,11 +190,11 @@ class NetAssistant {
 }
 
 enum Method {
-  get('GET'),
-  put('PUT'),
-  post('POST'),
-  update('UPDATE'),
-  delete('DELETE');
+  get('get'),
+  put('put'),
+  post('post'),
+  update('update'),
+  delete('delete');
 
   final String name;
 
