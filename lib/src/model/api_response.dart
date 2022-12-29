@@ -15,7 +15,7 @@ class ApiResponse<T> {
   ApiResponse();
   factory ApiResponse.fromJson(Map<String, dynamic> json,{dataKey}) => $ApiResponseFromJson<T>(json,dataKey: dataKey)..status=Status.success;
   factory ApiResponse.failure(ApiResponse response) =>ApiResponse()..code=-1..msg=response.msg..status=Status.failure;
-  factory ApiResponse.error(ApiException? exception) =>ApiResponse()..code=-1..msg='error'..exception=exception..status=Status.error;
+  factory ApiResponse.error(ApiException? exception) =>ApiResponse()..code=-1..msg=exception==null?'未知异常':exception.message??'未知异常'..exception=exception..status=Status.error;
   Map<String, dynamic> toJson() => $ApiResponseToJson(this);
 
   @override
