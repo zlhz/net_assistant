@@ -111,6 +111,7 @@ class NetAssistant {
       data,
       Map<String, dynamic>? headers,
       ErrorCallback? onError,
+      bool throwException=false,
       dataKey}) async {
     try {
       Options options = Options()
@@ -129,7 +130,6 @@ class NetAssistant {
       return ApiResponse.failure(_handleResponse<T>(response, dataKey));
     } catch (e) {
       var exception = ApiException.from(e);
-      bool throwException = true;
       //method onError is defined,will not run _globalOnErrorHandler
       if (onError != null) {
         throwException=onError(exception);
