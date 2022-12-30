@@ -24,7 +24,7 @@ class ApiResponse<T> {
   }
 }
 
-ApiResponse<T> $ApiResponseFromJson<T>(Map<String, dynamic> json,{dataKey = 'data'}) {
+ApiResponse<T> $ApiResponseFromJson<T>(Map<String, dynamic> json,{String? dataKey = 'data'}) {
   final ApiResponse<T> apiResponse = ApiResponse();
   final int? code = jsonConvert.convert<int>(json['code']);
   if (code != null) {
