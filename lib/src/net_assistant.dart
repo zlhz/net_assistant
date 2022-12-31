@@ -112,7 +112,7 @@ class NetAssistant {
       Map<String, dynamic>? headers,
       ErrorCallback? onError,
       bool throwException=false,
-      dataKey}) async {
+      String? dataKey = 'data'}) async {
     try {
       Options options = Options()
         ..method = method.name
